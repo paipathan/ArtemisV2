@@ -1,6 +1,7 @@
 repositories {
     mavenCentral()
     google() // Needed for androidx
+    maven { url = 'https://maven.brott.dev/' }
     maven { url = "https://mymaven.bylazar.com/releases" }
 }
 
@@ -18,5 +19,13 @@ dependencies {
     implementation 'com.pedropathing:ftc:2.0.4'
     implementation 'com.pedropathing:telemetry:1.0.0'
     implementation 'com.bylazar:fullpanels:1.0.9'
+    implementation 'dev.nextftc:bindings:1.0.1'
+
+    implementation 'com.acmerobotics.dashboard:dashboard:0.5.1'
+
+    implementation 'dev.nextftc:ftc:1.0.1'
+    implementation 'dev.nextftc:hardware:1.0.1'
+    implementation 'org.ftclib.ftclib:core:2.1.1'
+
 }
 
