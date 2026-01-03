@@ -16,8 +16,10 @@ public class Intake {
 
     public Servo servo;
 
-    public double GATE_CLOSE = 1;
+    public double GATE_CLOSE = 0.5;
     public double GATE_OPEN = 0;
+
+    public static boolean isBusy = false;
 
     public Intake(HardwareMap hwMap) {
         backMotor = hwMap.get(DcMotorEx.class, "backIntakeMotor");
@@ -39,6 +41,8 @@ public class Intake {
         return new InstantCommand(() -> {
             backMotor.setPower(0);
             frontMotor.setPower(0);
+
+            isBusy = false;
         });
     }
 
@@ -46,6 +50,8 @@ public class Intake {
         return new InstantCommand(()-> {
             backMotor.setPower(1);
             frontMotor.setPower(1);
+
+            isBusy = true;
         });
     }
 
@@ -55,6 +61,8 @@ public class Intake {
             frontMotor.setPower(1);
 
             servo.setPosition(GATE_CLOSE);
+
+            isBusy = true;
         });
     }
 
@@ -64,6 +72,8 @@ public class Intake {
             frontMotor.setPower(0);
 
             servo.setPosition(GATE_OPEN);
+
+            isBusy = true;
         });
     }
 
@@ -71,6 +81,8 @@ public class Intake {
         return new InstantCommand(()-> {
             backMotor.setPower(-1);
             frontMotor.setPower(-1);
+
+            isBusy = true;
         });
     }
 

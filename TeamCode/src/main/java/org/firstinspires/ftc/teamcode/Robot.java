@@ -32,6 +32,9 @@ public class Robot {
     public Turret turret;
     public Led led;
 
+    public int target = 2000;
+
+
     public Pose resetPose;
     public Pose goalPose;
 
@@ -42,12 +45,13 @@ public class Robot {
         this.alliance = alliance;
 
         resetPose = alliance == Alliance.BLUE ? new Pose(8, 8, Math.toRadians(90)) : new Pose(8, 8, Math.toRadians(90)).mirror();
-        goalPose = new Pose(12, 137);
+        goalPose = new Pose(6, 144-6);
 
         outtake = new Outtake(hwMap);
         intake = new Intake(hwMap);
         turret = new Turret(hwMap);
-//        led = new Led(hwMap);
+        led = new Led(hwMap);
+        led.initializeArtboards();
 
 
         follower = Constants.createFollower(hwMap);
@@ -64,9 +68,9 @@ public class Robot {
 
 
         updateTurret();
-//        if(!Outtake.isBusy) {
-//            outtake.outtakeMotor.setVelocity(1000);
-//        }
+        if(!Outtake.isBusy) {
+            outtake.outtakeMotor.setVelocity(8.62791 * getDistanceFromGoal() + 1242.92601);
+        }
 
         CommandManager.INSTANCE.run();
         BindingManager.update();
@@ -74,21 +78,31 @@ public class Robot {
 
     private void updateTurret() {
         Pose robotPose = follower.getPose();
-
         double robotHeading = robotPose.getHeading();
 
-        double dx = goalPose.getX() - robotPose.getX();
-        double dy = goalPose.getY() - robotPose.getY();
+
+        double cosH = Math.cos(robotHeading);
+        double sinH = Math.sin(robotHeading);
+
+        double turretX = robotPose.getX() + (turret.TURRET_OFFSET_X * cosH - turret.TURRET_OFFSET_Y * sinH);
+        double turretY = robotPose.getY() + (turret.TURRET_OFFSET_X * sinH + turret.TURRET_OFFSET_Y * cosH);
+
+        double dx = goalPose.getX() - turretX;
+        double dy = goalPose.getY() - turretY;
 
         double fieldTargetAngle = Math.atan2(dy, dx);
-
         desiredTurretAngle = normalize(fieldTargetAngle - robotHeading);
 
         double targetAngle;
-
         if (LimeLight.getLatestResult() != null) {
-            double txRad = Math.toRadians(LimeLight.getTX());
-            targetAngle = desiredTurretAngle - txRad;
+            double tx = LimeLight.getTX();
+            double txRad = Math.toRadians(tx);
+            if (Math.abs(tx) < 5.0) {
+                double currentAngleRad = ticksToRadians(turret.turretMotor.getCurrentPosition());
+                targetAngle = currentAngleRad + txRad;
+            } else {
+                targetAngle = desiredTurretAngle + txRad;
+            }
         } else {
             targetAngle = desiredTurretAngle;
         }
@@ -99,6 +113,10 @@ public class Robot {
 
     public double radiansToTicks(double rad) {
         return (rad / (2.0 * Math.PI)) * turret.TICKS_PER_REV;
+    }
+
+    private double ticksToRadians(double ticks) {
+        return (ticks / turret.TICKS_PER_REV) * (2.0 * Math.PI);
     }
 
     public static double normalize(double angleRadians) {
@@ -112,19 +130,37 @@ public class Robot {
         Button toggleIntake = button(() -> gamepad.left_bumper)
                 .whenBecomesTrue(() -> {
                     intake.start().schedule();
-                    intake.closeGate().schedule();
+                    if(Outtake.isBusy) { // feed
+                        intake.openGate().schedule();
+                    } else {             // intake
+                        intake.closeGate().schedule();
+                        led.setState(Led.State.BLINK_RED);
+                    }
                 })
                 .whenBecomesFalse(() -> {
                     intake.stop().schedule();
+                    led.setState(Led.State.SOLID_RED);
                 });
 
         Button toggleOuttake = button(() -> gamepad.right_bumper)
                 .whenBecomesTrue(()-> {
-                    outtake.setManual(2200).schedule();
                     intake.openGate().schedule();
+                    led.setState(Led.State.BLINK_GREEN);
                 })
                 .whenBecomesFalse(() -> {
                     outtake.stop().schedule();
+                    led.setState(Led.State.SOLID_GREEN);
+
+                    gamepad.stopRumble();
+                })
+                .whenTrue(() -> {
+                    outtake.setManual(8.62791 * getDistanceFromGoal() +1242.92601).schedule();
+
+                    if(outtake.getVelocity() >= (8.62791 * getDistanceFromGoal() +1242.92601) && !Intake.isBusy) {
+                        intake.start().schedule();
+                    } else if(outtake.getVelocity() < (8.62791 * getDistanceFromGoal() +1242.92601) && Intake.isBusy) {
+                        intake.stop().schedule();
+                    }
                 });
 
         Button resetPoseButton = button(() -> gamepad.a)

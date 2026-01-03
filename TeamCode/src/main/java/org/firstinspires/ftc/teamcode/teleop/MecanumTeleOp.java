@@ -5,6 +5,8 @@ import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 
+import org.firstinspires.ftc.teamcode.subsystems.Led;
+
 @TeleOp(name="MecanumTeleOp", group="TeleOp")
 public class MecanumTeleOp extends LinearOpMode {
     @Override
@@ -23,11 +25,26 @@ public class MecanumTeleOp extends LinearOpMode {
         frontRightMotor.setDirection(DcMotorSimple.Direction.REVERSE);
         backRightMotor.setDirection(DcMotorSimple.Direction.REVERSE);
 
+        Led led = new Led(hardwareMap);
+
+        led.initializeArtboards();
+
         waitForStart();
 
         if (isStopRequested()) return;
 
         while (opModeIsActive()) {
+
+            if(gamepad1.a) {
+                led.setState(Led.State.SOLID_RED);
+            } else if(gamepad1.b) {
+                led.setState(Led.State.SOLID_GREEN);
+            } else if(gamepad1.x) {
+                led.setState(Led.State.BLINK_RED);
+            } else if(gamepad1.y) {
+                led.setState(Led.State.BLINK_GREEN);
+            }
+
             double y = -gamepad1.left_stick_y; // Remember, Y stick value is reversed
             double x = gamepad1.left_stick_x * 1.1; // Counteract imperfect strafing
             double rx = gamepad1.right_stick_x;

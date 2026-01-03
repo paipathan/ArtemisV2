@@ -25,12 +25,16 @@ public class Outtake {
         outtakeMotor.setDirection(DcMotorSimple.Direction.REVERSE);
         outtakeMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
 
-//        configureLUT();
+        configureLUT();
     }
 
 
+    public double getVelocity () {
+        return outtakeMotor.getVelocity();
+    }
 
-    public InstantCommand setManual(int velocity) {
+
+    public InstantCommand setManual(double velocity) {
         return new InstantCommand(() -> {
             outtakeMotor.setVelocity(velocity);
             isBusy = true;
@@ -39,7 +43,7 @@ public class Outtake {
 
     public InstantCommand setPredictedVelo(double distance) {
         return new InstantCommand(() -> {
-            outtakeMotor.setVelocity(lut.get(distance));
+            outtakeMotor.setVelocity(getPredictedVelo(distance));
             isBusy = true;
         });
     }
@@ -58,15 +62,19 @@ public class Outtake {
         });
     }
 
+    public double getPredictedVelo(double distance) {
+        return lut.get(distance);
+    }
 
-//    public void configureLUT() {
-//        lut = new InterpLUT();
-//        lut.add(0, 0);
-//        lut.add(0, 0);
-//        lut.add(0, 0);
-//        lut.add(0, 0);
-//        lut.add(0, 0);
-//
-//        lut.createLUT();
-//    }
+
+    public void configureLUT() {
+        lut = new InterpLUT();
+        lut.add(53, 1700);
+        lut.add(70, 1800);
+        lut.add(90, 2050);
+        lut.add(115, 2300);
+        lut.add(147, 2400);
+        lut.add(150, 2600);
+        lut.createLUT();
+    }
 }

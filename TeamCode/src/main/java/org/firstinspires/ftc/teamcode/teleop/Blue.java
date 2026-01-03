@@ -5,6 +5,7 @@ import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
 import org.firstinspires.ftc.teamcode.Robot;
+import org.firstinspires.ftc.teamcode.subsystems.Led;
 import org.firstinspires.ftc.teamcode.subsystems.Outtake;
 import org.firstinspires.ftc.teamcode.util.Alliance;
 import org.firstinspires.ftc.teamcode.util.Drawing;
@@ -17,25 +18,28 @@ public class Blue extends LinearOpMode {
     @Override
     public void runOpMode() throws InterruptedException {
         Robot robot = new Robot(hardwareMap, Alliance.BLUE, gamepad1);
+
         waitForStart();
 
         while(opModeIsActive()) {
             robot.periodic();
 
-            telemetry.addData("Turret current ticks: ", robot.turret.turretMotor.getCurrentPosition());
+
+            telemetry.addData("Outtake target: ", robot.target);
+            telemetry.addData("Outtake rpm: ", robot.outtake.outtakeMotor.getVelocity());
+            telemetry.addData("Distance from goal:", robot.getDistanceFromGoal());
+
             telemetry.update();
 
-            telemetry.addData("dx", robot.goalPose.getX() - robot.follower.getPose().getX());
-            telemetry.addData("dy", robot.goalPose.getY() - robot.follower.getPose().getY());
-            telemetry.addData("Field target angle (deg)", Math.toDegrees(Math.atan2(
-                    robot.goalPose.getY() - robot.follower.getPose().getY(),
-                    robot.goalPose.getX() - robot.follower.getPose().getX()
-            )));
-            telemetry.addData("Desired turret (deg)", Math.toDegrees(robot.desiredTurretAngle));
-            telemetry.addData("Target ticks (before clamp)", robot.radiansToTicks(robot.desiredTurretAngle));
+            if(gamepad1.dpad_up) {
+                robot.target = robot.target + 50;
+            } else if (gamepad1.dpad_down) {
+                robot.target = robot.target - 50;
+            }
 
 
             Drawing.init();
+
             Drawing.drawRobot(robot.follower.getPose());
             Drawing.drawPoseHistory(robot.follower.getPoseHistory());
             Drawing.sendPacket();

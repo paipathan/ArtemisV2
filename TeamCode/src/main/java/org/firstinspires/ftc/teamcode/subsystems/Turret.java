@@ -16,9 +16,14 @@ public class Turret {
     private PIDFController coarsePIDF;
     private PIDFController finePID;
 
-    public int MIN_TICKS = -1360;
-    public int MAX_TICKS =  1360;
-    public int TICKS_PER_REV = 1360*2;
+    public int MIN_TICKS = -689;
+    public int MAX_TICKS =  689;
+    public int TICKS_PER_REV = 847*2;
+
+
+
+    public double TURRET_OFFSET_X = 0;
+    public double TURRET_OFFSET_Y   = -6.457;
 
     private static final double SWITCH_THRESHOLD = 25;
 
@@ -30,8 +35,8 @@ public class Turret {
         turretMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         turretMotor.setDirection(DcMotorSimple.Direction.REVERSE);
 
-        coarsePIDF = new PIDFController(new PIDFCoefficients(0.025, 0,0,0));
-        finePID = new PIDFController( new PIDFCoefficients(0.015,0,0,0));
+        coarsePIDF = new PIDFController(new PIDFCoefficients(0.03, 0,0,0));
+        finePID = new PIDFController( new PIDFCoefficients(0.04,0,0,0));
     }
 
     public void update(double targetTicks) {
