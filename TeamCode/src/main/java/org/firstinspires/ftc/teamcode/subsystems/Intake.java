@@ -16,8 +16,8 @@ public class Intake {
 
     public Servo servo;
 
-    public double GATE_CLOSE = 0.5;
-    public double GATE_OPEN = 0;
+    public double GATE_CLOSE = 0.62;
+    public double GATE_OPEN = 0.42;
 
     public static boolean isBusy = false;
 
@@ -34,6 +34,8 @@ public class Intake {
 
         servo = hwMap.get(Servo.class, "servoStopper");
         servo.setDirection(Servo.Direction.FORWARD);
+
+        servo.scaleRange(0, 1);
     }
 
 
@@ -68,8 +70,8 @@ public class Intake {
 
     public InstantCommand feed() {
         return new InstantCommand(()-> {
-            backMotor.setPower(0);
-            frontMotor.setPower(0);
+            backMotor.setPower(1);
+            frontMotor.setPower(1);
 
             servo.setPosition(GATE_OPEN);
 

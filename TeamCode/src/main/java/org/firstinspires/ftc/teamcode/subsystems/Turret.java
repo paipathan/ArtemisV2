@@ -16,11 +16,12 @@ public class Turret {
     private PIDFController coarsePIDF;
     private PIDFController finePID;
 
-    public int MIN_TICKS = -689;
-    public int MAX_TICKS =  689;
-    public int TICKS_PER_REV = 847*2;
+    public int MIN_TICKS = -855;
+    public int MAX_TICKS =  855;
+    public int TICKS_PER_REV = 885*2;
 
-
+    public static Integer lastKnownPosition = null;
+    private int encoderOffset = 0;
 
     public double TURRET_OFFSET_X = 0;
     public double TURRET_OFFSET_Y   = -6.457;
@@ -36,13 +37,28 @@ public class Turret {
         turretMotor.setDirection(DcMotorSimple.Direction.REVERSE);
 
         coarsePIDF = new PIDFController(new PIDFCoefficients(0.03, 0,0,0));
-        finePID = new PIDFController( new PIDFCoefficients(0.04,0,0,0));
+        finePID = new PIDFController( new PIDFCoefficients(0.03,0,0,0));
+
+        if (lastKnownPosition != null) {
+            turretMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+            turretMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+            encoderOffset = lastKnownPosition;
+        } else {
+            turretMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+            turretMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+            encoderOffset = 0;
+        }
+    }
+
+    public void resetTurret() {
+        turretMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        turretMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
     }
 
     public void update(double targetTicks) {
         targetTicks = clamp(targetTicks, MIN_TICKS, MAX_TICKS);
 
-        double error = targetTicks - turretMotor.getCurrentPosition();
+        double error = targetTicks - getTurretPosition();
 
         double power;
 
@@ -56,5 +72,11 @@ public class Turret {
         }
 
         turretMotor.setPower(clamp(power, -1.0, 1.0));
+
+        lastKnownPosition = getTurretPosition();
+    }
+
+    public int getTurretPosition() {
+        return turretMotor.getCurrentPosition() + encoderOffset;
     }
 }

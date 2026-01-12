@@ -3,11 +3,14 @@ package org.firstinspires.ftc.teamcode.auto;
 import com.pedropathing.follower.Follower;
 import com.pedropathing.geometry.BezierLine;
 import com.pedropathing.geometry.Pose;
+import com.pedropathing.paths.PathBuilder;
 import com.pedropathing.paths.PathChain;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 
 import org.firstinspires.ftc.teamcode.Robot;
+import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
+import org.firstinspires.ftc.teamcode.subsystems.Turret;
 import org.firstinspires.ftc.teamcode.util.Alliance;
 import org.firstinspires.ftc.teamcode.util.Drawing;
 
@@ -20,13 +23,22 @@ public class Far9Blue extends LinearOpMode {
 
     @Override
     public void runOpMode() throws InterruptedException {
+        Robot.endPose = null;
+        Turret.lastKnownPosition = null;
         Robot robot = new Robot(hardwareMap, Alliance.BLUE, gamepad1);
+
         Paths paths = new Paths(robot.follower);
         robot.follower.setStartingPose(new Pose(55.76360808709176, 7.614307931570755, Math.toRadians(90)));
 
 
         SequentialGroup autoRoutine = new SequentialGroup(
-                robot.followPath(paths.Path1, 1)
+                robot.followPath(paths.shoot1, 1),
+                robot.shootArtifact(3, true),
+                robot.autoIntake,
+                robot.followPath(paths.intake1, 1),
+                robot.intake.stop(),
+                robot.followPath(paths.shoot2, 1),
+                robot.shootArtifact(3, true)
         );
 
         robot.follower.breakFollowing();
@@ -40,28 +52,51 @@ public class Far9Blue extends LinearOpMode {
         autoRoutine.schedule();
 
         while(opModeIsActive()) {
-            robot.follower.update();
-            CommandManager.INSTANCE.run();
-
+            robot.autoPeriodic();
 
             Drawing.init();
             Drawing.drawRobot(robot.follower.getPose());
             Drawing.drawPoseHistory(robot.follower.getPoseHistory());
             Drawing.sendPacket();
         }
+
+        robot.saveState();
     }
 
     public static class Paths {
-
-        public PathChain Path1;
+        public PathChain shoot1;
+        public PathChain intake1;
+        public PathChain shoot2;
 
         public Paths(Follower follower) {
-            Path1 = follower
-                    .pathBuilder()
-                    .addPath(
-                            new BezierLine(new Pose(56.000, 8.000), new Pose(72.000, 72.000))
-                    )
-                    .setLinearHeadingInterpolation(Math.toRadians(90), Math.toRadians(180))
+            shoot1 = follower.pathBuilder().addPath(
+                            new BezierLine(
+                                    new Pose(55.800, 7.600),
+
+                                    new Pose(55.800, 83.600)
+                            )
+                    ).setLinearHeadingInterpolation(Math.toRadians(90), Math.toRadians(180))
+
+                    .build();
+
+            intake1 = follower.pathBuilder().addPath(
+                            new BezierLine(
+                                    new Pose(55.800, 83.600),
+
+                                    new Pose(15.000, 83.600)
+                            )
+                    ).setConstantHeadingInterpolation(Math.toRadians(180))
+
+                    .build();
+
+            shoot2 = follower.pathBuilder().addPath(
+                            new BezierLine(
+                                    new Pose(15.000, 83.600),
+
+                                    new Pose(55.800, 83.600)
+                            )
+                    ).setConstantHeadingInterpolation(Math.toRadians(180))
+
                     .build();
         }
     }

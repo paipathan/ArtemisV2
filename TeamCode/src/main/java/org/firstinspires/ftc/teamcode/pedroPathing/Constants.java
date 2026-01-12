@@ -14,10 +14,11 @@ import com.qualcomm.robotcore.hardware.HardwareMap;
 
 public class Constants {
     public static FollowerConstants followerConstants = new FollowerConstants()
+            .mass(12.15)
             .forwardZeroPowerAcceleration(-42.86778393162657)
             .lateralZeroPowerAcceleration(-62.84821313539771);
 
-    public static PathConstraints pathConstraints = new PathConstraints(0.99, 100, 1, 1);
+    public static PathConstraints pathConstraints = new PathConstraints(0.99, 100, 0.5   , 1);
 
     public static MecanumConstants driveConstants = new MecanumConstants()
             .maxPower(1)
@@ -34,10 +35,10 @@ public class Constants {
 
 
     public static TwoWheelConstants localizerConstants = new TwoWheelConstants()
-            .forwardEncoder_HardwareMapName("backLeft")
+            .forwardEncoder_HardwareMapName("frontRight")
             .forwardPodY(-5.728761)
-            .forwardTicksToInches(0.001981824343154343)
-            .strafeEncoder_HardwareMapName("backIntakeMotor")
+            .forwardTicksToInches(0.0019679197650900753)
+            .strafeEncoder_HardwareMapName("frontIntakeMotor")
             .strafePodX(-0.973710)
             .strafeTicksToInches(0.0018061299266968916)
             .forwardEncoderDirection(Encoder.FORWARD)

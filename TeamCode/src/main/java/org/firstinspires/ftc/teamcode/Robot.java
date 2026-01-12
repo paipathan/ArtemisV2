@@ -1,5 +1,7 @@
 package org.firstinspires.ftc.teamcode;
 
+import static org.firstinspires.ftc.teamcode.LimeLight.distanceFromTag;
+import static org.firstinspires.ftc.teamcode.LimeLight.getRobotPose;
 import static dev.nextftc.bindings.Bindings.button;
 
 import com.pedropathing.follower.Follower;
@@ -9,6 +11,7 @@ import com.qualcomm.robotcore.hardware.Gamepad;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 
 import org.firstinspires.ftc.teamcode.commands.FollowPath;
+import org.firstinspires.ftc.teamcode.commands.ShootArtifact;
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 import org.firstinspires.ftc.teamcode.subsystems.Intake;
 import org.firstinspires.ftc.teamcode.subsystems.Led;
@@ -20,6 +23,7 @@ import dev.nextftc.bindings.BindingManager;
 import dev.nextftc.bindings.Button;
 import dev.nextftc.core.commands.Command;
 import dev.nextftc.core.commands.CommandManager;
+import dev.nextftc.core.commands.utility.InstantCommand;
 
 public class Robot {
 
@@ -30,56 +34,88 @@ public class Robot {
     public Outtake outtake;
     public Intake intake;
     public Turret turret;
-    public Led led;
+//    public Led led;
 
-    public int target = 2000;
+    public double targetVelo = 0;
+    private long lastValidLimelightTime = 0;
+    private static final long LIMELIGHT_TIMEOUT_MS = 200;
 
+    public double target = 2000;
 
     public Pose resetPose;
     public Pose goalPose;
 
+    public static Pose endPose;
+
     public double desiredTurretAngle = 0;
 
+    public InstantCommand autoIntake;
+
     public Robot(HardwareMap hwMap, Alliance alliance, Gamepad gamepad) {
+        LimeLight.init(hwMap);
         this.gamepad = gamepad;
         this.alliance = alliance;
 
         resetPose = alliance == Alliance.BLUE ? new Pose(8, 8, Math.toRadians(90)) : new Pose(8, 8, Math.toRadians(90)).mirror();
-        goalPose = new Pose(6, 144-6);
+        goalPose = alliance == Alliance.BLUE ? new Pose(11, 138) : new Pose(11, 138).mirror();
 
         outtake = new Outtake(hwMap);
         intake = new Intake(hwMap);
         turret = new Turret(hwMap);
-        led = new Led(hwMap);
-        led.initializeArtboards();
-
+//        led = new Led(hwMap);
+//        led.initializeArtboards();
 
         follower = Constants.createFollower(hwMap);
         follower.startTeleopDrive();
-        follower.setStartingPose(resetPose);
         follower.update();
 
         configureKeybinds();
+
+
+        autoIntake = new InstantCommand(() -> {
+            intake.closeGate().schedule();
+            intake.start().schedule();
+        });
+
+
+        if(endPose != null) {
+            follower.setPose(endPose);
+        } else {
+            follower.setPose(resetPose);
+        }
+
     }
 
     public void periodic() {
         follower.setTeleOpDrive(-gamepad.left_stick_y, -gamepad.left_stick_x, -gamepad.right_stick_x, true);
         follower.update();
 
-
         updateTurret();
+
         if(!Outtake.isBusy) {
-            outtake.outtakeMotor.setVelocity(8.62791 * getDistanceFromGoal() + 1242.92601);
+            outtake.outtakeMotor.setVelocity(outtake.getPredictedVelo(getDistanceFromGoal()) * 0.7);
         }
 
         CommandManager.INSTANCE.run();
         BindingManager.update();
     }
 
-    private void updateTurret() {
+    public void autoPeriodic() {
+        follower.update();
+
+        updateTurret();
+
+        if(!Outtake.isBusy) {
+            outtake.outtakeMotor.setVelocity(outtake.getPredictedVelo(getDistanceFromGoal()) * 0.7);
+        }
+
+        CommandManager.INSTANCE.run();
+        BindingManager.update();
+    }
+
+    public void updateTurret() {
         Pose robotPose = follower.getPose();
         double robotHeading = robotPose.getHeading();
-
 
         double cosH = Math.cos(robotHeading);
         double sinH = Math.sin(robotHeading);
@@ -93,21 +129,24 @@ public class Robot {
         double fieldTargetAngle = Math.atan2(dy, dx);
         desiredTurretAngle = normalize(fieldTargetAngle - robotHeading);
 
-        double targetAngle;
-        if (LimeLight.getLatestResult() != null) {
-            double tx = LimeLight.getTX();
-            double txRad = Math.toRadians(tx);
-            if (Math.abs(tx) < 5.0) {
-                double currentAngleRad = ticksToRadians(turret.turretMotor.getCurrentPosition());
-                targetAngle = currentAngleRad + txRad;
-            } else {
-                targetAngle = desiredTurretAngle + txRad;
-            }
-        } else {
-            targetAngle = desiredTurretAngle;
+        if (LimeLight.validResult()) {
+            lastValidLimelightTime = System.currentTimeMillis();
         }
 
-        double targetTicks = radiansToTicks(targetAngle);
+        boolean hasRecentTarget = (System.currentTimeMillis() - lastValidLimelightTime) < LIMELIGHT_TIMEOUT_MS;
+
+        if (Outtake.isBusy && hasRecentTarget) {
+            if (LimeLight.validResult()) {
+                double tx = LimeLight.getTX();
+                double kp = 0.04;
+                double power = tx * kp;
+                turret.turretMotor.setPower(clamp(power, -1.0, 1.0));
+            } else {
+                turret.turretMotor.setPower(0);
+            }
+            return;
+        }
+        double targetTicks = radiansToTicks(desiredTurretAngle);
         turret.update(targetTicks);
     }
 
@@ -127,40 +166,47 @@ public class Robot {
     }
 
     public void configureKeybinds() {
+
+        Button x = button(() -> gamepad.x)
+                .whenBecomesTrue(() -> {
+                    intake.servo.setPosition(intake.servo.getPosition() + 0.01);
+                });
+
+        Button b = button(() -> gamepad.b)
+                .whenBecomesTrue(() -> {
+                    intake.servo.setPosition(intake.servo.getPosition() - 0.01);
+                });
+
+        Button dpadup = button(() -> gamepad.dpad_up)
+                .whenBecomesTrue(() -> {
+                    target = target + 50;
+                });
+
+        Button dpaddown = button(() -> gamepad.dpad_down)
+                .whenBecomesTrue(() -> {
+                    target = target - 50;
+                });
+
         Button toggleIntake = button(() -> gamepad.left_bumper)
                 .whenBecomesTrue(() -> {
                     intake.start().schedule();
-                    if(Outtake.isBusy) { // feed
-                        intake.openGate().schedule();
-                    } else {             // intake
-                        intake.closeGate().schedule();
-                        led.setState(Led.State.BLINK_RED);
-                    }
+//                    led.setState(Led.State.BLINK_RED);
                 })
                 .whenBecomesFalse(() -> {
                     intake.stop().schedule();
-                    led.setState(Led.State.SOLID_RED);
+                    // led.setState(Led.State.SOLID_RED);
                 });
 
         Button toggleOuttake = button(() -> gamepad.right_bumper)
                 .whenBecomesTrue(()-> {
                     intake.openGate().schedule();
-                    led.setState(Led.State.BLINK_GREEN);
+                    outtake.setPredictedVelo(getDistanceFromGoal()).schedule();
+                   // led.setState(Led.State.BLINK_GREEN);
                 })
                 .whenBecomesFalse(() -> {
+                    intake.closeGate().schedule();
                     outtake.stop().schedule();
-                    led.setState(Led.State.SOLID_GREEN);
-
-                    gamepad.stopRumble();
-                })
-                .whenTrue(() -> {
-                    outtake.setManual(8.62791 * getDistanceFromGoal() +1242.92601).schedule();
-
-                    if(outtake.getVelocity() >= (8.62791 * getDistanceFromGoal() +1242.92601) && !Intake.isBusy) {
-                        intake.start().schedule();
-                    } else if(outtake.getVelocity() < (8.62791 * getDistanceFromGoal() +1242.92601) && Intake.isBusy) {
-                        intake.stop().schedule();
-                    }
+                   // led.setState(Led.State.SOLID_GREEN);
                 });
 
         Button resetPoseButton = button(() -> gamepad.a)
@@ -170,11 +216,24 @@ public class Robot {
                 });
     }
 
+    public void saveState() {
+        Robot.endPose = follower.getPose();
+        Turret.lastKnownPosition = turret.getTurretPosition();
+    }
+
+    public Command shootArtifact(int shots, boolean stagger) {
+        return new ShootArtifact(this, shots, stagger);
+    }
+
     public Command followPath(PathChain path, double maxPower) {
         return new FollowPath(path, this.follower, maxPower);
     }
 
     public double getDistanceFromGoal() {
         return follower.getPose().distanceFrom(goalPose);
+    }
+
+    public double clamp(double value, double min, double max) {
+        return Math.max(min, Math.min(max, value));
     }
 }

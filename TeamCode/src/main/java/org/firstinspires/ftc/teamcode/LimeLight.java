@@ -1,8 +1,5 @@
 package org.firstinspires.ftc.teamcode;
 
-import com.pedropathing.ftc.FTCCoordinates;
-import com.pedropathing.ftc.InvertedFTCCoordinates;
-import com.pedropathing.geometry.PedroCoordinates;
 import com.pedropathing.geometry.Pose;
 import com.pedropathing.math.Vector;
 import com.qualcomm.hardware.limelightvision.LLResult;
@@ -11,12 +8,10 @@ import com.qualcomm.hardware.limelightvision.Limelight3A;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.IMU;
 
-import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.Pose3D;
 
 import java.util.List;
-import java.util.Objects;
 
 public class LimeLight {
 
@@ -28,7 +23,6 @@ public class LimeLight {
         ll.pipelineSwitch(0);
         ll.setPollRateHz(100);
         ll.start();
-
         imu = hwMap.get(IMU.class, "imu");
     }
 
@@ -56,7 +50,7 @@ public class LimeLight {
         return ll.getLatestResult().getTa();
     }
 
-    public double distanceFromTag(double tagID) {
+    public static double distanceFromTag(double tagID) {
         List<LLResultTypes.FiducialResult> r = ll.getLatestResult().getFiducialResults();
 
         if (r.isEmpty()) return 0;
@@ -81,11 +75,11 @@ public class LimeLight {
         return 0;
     }
 
-    public double distanceFromBlue() {
+    public static double distanceFromBlueGoal() {
         return distanceFromTag(20);
     }
 
-    public double distanceFromRed() {
+    public static double distanceFromRedGoal() {
         return distanceFromTag(24);
     }
 
