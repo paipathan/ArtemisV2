@@ -15,7 +15,6 @@ import org.firstinspires.ftc.teamcode.util.Alliance;
 import org.firstinspires.ftc.teamcode.util.Drawing;
 
 import dev.nextftc.core.commands.CommandManager;
-
 import dev.nextftc.core.commands.groups.SequentialGroup;
 
 @Autonomous(name="[BLUE] Far 9", group="Auto")
