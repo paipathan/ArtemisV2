@@ -73,26 +73,28 @@ public class Outtake {
     }
 
     public double getPredictedVelo(double distance) {
-        if(distance < 30.61 || distance > 146.61) {
-            return 7.40945 * distance + 1336.69712;
+        if(distance < 36.84 || distance > 141.25) {
+            return (6.87514 * distance +1350.24284) - 30;
         } else {
-            return lut.get(distance);
+            return lut.get(distance) - 45;
         }
     }
 
 
     public void configureLut() {
         lut = new InterpLUT();
-        lut.add(30.61, 1620);
-        lut.add(47.95, 1700);
-        lut.add(53.81, 1730);
-        lut.add(65.89, 1850);
-        lut.add(79.52, 1900);
-        lut.add(104.34, 2000);
-        lut.add(114.57, 2050);
-        lut.add(125.94, 2300);
-        lut.add(135.42, 2450);
-        lut.add(146.61, 2470);
+        lut.add(36.84, 1600);
+        lut.add(48.35, 1650);
+        lut.add(60.01, 1700);
+        lut.add(62.75, 1800);
+        lut.add(71.33, 1850);
+        lut.add(79.23, 1900);
+        lut.add(79.48, 1900);
+        lut.add(92.63, 2050);
+        lut.add(108.92, 2200);
+        lut.add(134.54, 2250);
+        lut.add(138.77, 2200);
+        lut.add(141.25, 2350);
         lut.createLUT();
     }
 

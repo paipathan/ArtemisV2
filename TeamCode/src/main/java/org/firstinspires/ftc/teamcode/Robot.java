@@ -23,6 +23,9 @@ import dev.nextftc.bindings.BindingManager;
 import dev.nextftc.bindings.Button;
 import dev.nextftc.core.commands.Command;
 import dev.nextftc.core.commands.CommandManager;
+import dev.nextftc.core.commands.delays.Delay;
+import dev.nextftc.core.commands.delays.WaitUntil;
+import dev.nextftc.core.commands.groups.SequentialGroup;
 import dev.nextftc.core.commands.utility.InstantCommand;
 
 public class Robot {
@@ -36,9 +39,8 @@ public class Robot {
     public Turret turret;
 //    public Led led;
 
-    public double targetVelo = 0;
     private long lastValidLimelightTime = 0;
-    private static final long LIMELIGHT_TIMEOUT_MS = 200;
+    private static final long LIMELIGHT_TIMEOUT_MS = 750;
 
     public double target = 2000;
 
@@ -52,7 +54,7 @@ public class Robot {
     public InstantCommand autoIntake;
 
     public Robot(HardwareMap hwMap, Alliance alliance, Gamepad gamepad) {
-        LimeLight.init(hwMap);
+//        LimeLight.init(hwMap);
         this.gamepad = gamepad;
         this.alliance = alliance;
 
@@ -77,12 +79,11 @@ public class Robot {
             intake.start().schedule();
         });
 
-
-        if(endPose != null) {
-            follower.setPose(endPose);
-        } else {
-            follower.setPose(resetPose);
-        }
+//        if(endPose != null) {
+//            follower.setPose(endPose);
+//        } else {
+//            follower.setPose(resetPose);
+//        }
 
     }
 
@@ -92,9 +93,7 @@ public class Robot {
 
         updateTurret();
 
-        if(!Outtake.isBusy) {
-            outtake.outtakeMotor.setVelocity(outtake.getPredictedVelo(getDistanceFromGoal()) * 0.7);
-        }
+        if(!Outtake.isBusy) outtake.outtakeMotor.setVelocity(target * 0.7);
 
         CommandManager.INSTANCE.run();
         BindingManager.update();
@@ -106,7 +105,7 @@ public class Robot {
         updateTurret();
 
         if(!Outtake.isBusy) {
-            outtake.outtakeMotor.setVelocity(outtake.getPredictedVelo(getDistanceFromGoal()) * 0.7);
+            outtake.setRevSpeed(getDistanceFromGoal()).schedule();
         }
 
         CommandManager.INSTANCE.run();
@@ -128,24 +127,24 @@ public class Robot {
 
         double fieldTargetAngle = Math.atan2(dy, dx);
         desiredTurretAngle = normalize(fieldTargetAngle - robotHeading);
-
-        if (LimeLight.validResult()) {
-            lastValidLimelightTime = System.currentTimeMillis();
-        }
+//
+//        if (LimeLight.validResult()) {
+//            lastValidLimelightTime = System.currentTimeMillis();
+//        }
 
         boolean hasRecentTarget = (System.currentTimeMillis() - lastValidLimelightTime) < LIMELIGHT_TIMEOUT_MS;
 
-        if (Outtake.isBusy && hasRecentTarget) {
-            if (LimeLight.validResult()) {
-                double tx = LimeLight.getTX();
-                double kp = 0.04;
-                double power = tx * kp;
-                turret.turretMotor.setPower(clamp(power, -1.0, 1.0));
-            } else {
-                turret.turretMotor.setPower(0);
-            }
-            return;
-        }
+//        if (Outtake.isBusy && hasRecentTarget) {
+//            if (LimeLight.validResult()) {
+//                double tx = LimeLight.getTX();
+//                double kp = 0.035;
+//                double power = tx * kp;
+//                turret.turretMotor.setPower(clamp(power, -1.0, 1.0));
+//            } else {
+//                turret.turretMotor.setPower(0);
+//            }
+//            return;
+//        }
         double targetTicks = radiansToTicks(desiredTurretAngle);
         turret.update(targetTicks);
     }
@@ -198,16 +197,44 @@ public class Robot {
                 });
 
         Button toggleOuttake = button(() -> gamepad.right_bumper)
-                .whenBecomesTrue(()-> {
-                    intake.openGate().schedule();
-                    outtake.setPredictedVelo(getDistanceFromGoal()).schedule();
-                   // led.setState(Led.State.BLINK_GREEN);
-                })
-                .whenBecomesFalse(() -> {
-                    intake.closeGate().schedule();
-                    outtake.stop().schedule();
-                   // led.setState(Led.State.SOLID_GREEN);
+            .whenBecomesTrue(()-> {
+                intake.openGate().schedule();
+                outtake.setManual(target).schedule();
+            }).whenBecomesFalse(() -> {
+                intake.stop().schedule();
+                intake.closeGate().schedule();
+                outtake.stop().schedule();
+            })
+                .whenTrue(() -> {
+                    if(Math.abs(outtake.getVelocity() - target) < 15 && !Intake.isBusy) {
+                        intake.start().schedule();
+                    } else if(Math.abs(outtake.getVelocity() - target) > 15 && Intake.isBusy) {
+                        intake.stop().schedule();
+                    }
                 });
+
+
+
+//        Button toggleOuttake = button(() -> gamepad.right_bumper)
+//                .whenBecomesTrue(()-> {
+//                    intake.openGate().schedule();
+//                    outtake.setPredictedVelo(getDistanceFromGoal()).schedule();
+//                   // led.setState(Led.State.BLINK_GREEN);
+//                })
+//                .whenBecomesFalse(() -> {
+//                    intake.closeGate().schedule();
+//                    outtake.stop().schedule();
+//                   // led.setState(Led.State.SOLID_GREEN);
+//
+//                    gamepad.stopRumble();
+//                })
+//                .whenTrue(() -> {
+//                    if(Math.abs(outtake.getVelocity() - outtake.getPredictedVelo(getDistanceFromGoal())) < 50) {
+//                        gamepad.rumble(Gamepad.RUMBLE_DURATION_CONTINUOUS);
+//                    } else {
+//                        gamepad.stopRumble();
+//                    }
+//                });
 
         Button resetPoseButton = button(() -> gamepad.a)
                 .whenBecomesTrue(() -> {
@@ -221,8 +248,8 @@ public class Robot {
         Turret.lastKnownPosition = turret.getTurretPosition();
     }
 
-    public Command shootArtifact(int shots, boolean stagger) {
-        return new ShootArtifact(this, shots, stagger);
+    public Command shootArtifact(int shots) {
+        return new ShootArtifact(this, shots);
     }
 
     public Command followPath(PathChain path, double maxPower) {

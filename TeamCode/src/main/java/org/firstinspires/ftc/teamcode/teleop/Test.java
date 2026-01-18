@@ -2,6 +2,7 @@ package org.firstinspires.ftc.teamcode.teleop;
 
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
+import com.qualcomm.robotcore.hardware.DcMotorEx;
 
 import org.firstinspires.ftc.teamcode.LimeLight;
 import org.firstinspires.ftc.teamcode.Robot;
@@ -20,6 +21,10 @@ public class Test extends LinearOpMode {
         Turret.lastKnownPosition = null;
         Robot robot = new Robot(hardwareMap, Alliance.BLUE, gamepad1);
 
+        robot.follower.setStartingPose(robot.resetPose);
+
+        robot.follower.update();
+
         waitForStart();
 
         while(opModeIsActive()) {
@@ -30,7 +35,6 @@ public class Test extends LinearOpMode {
             telemetry.addData("turret: ", robot.turret.turretMotor.getCurrentPosition());
             telemetry.addData("Servo Stopper Position: ", robot.intake.servo.getPosition());
             telemetry.addData("Distance from goal:", robot.getDistanceFromGoal());
-
             telemetry.addData("Predicted:", robot.outtake.getPredictedVelo(robot.getDistanceFromGoal()));
 
             telemetry.update();

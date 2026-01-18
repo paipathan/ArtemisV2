@@ -16,7 +16,7 @@ public class Intake {
 
     public Servo servo;
 
-    public double GATE_CLOSE = 0.62;
+    public double GATE_CLOSE = 0.56;
     public double GATE_OPEN = 0.42;
 
     public static boolean isBusy = false;
