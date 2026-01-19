@@ -36,7 +36,9 @@ public class Test extends LinearOpMode {
             telemetry.addData("Servo Stopper Position: ", robot.intake.servo.getPosition());
             telemetry.addData("Distance from goal:", robot.getDistanceFromGoal());
             telemetry.addData("Predicted:", robot.outtake.getPredictedVelo(robot.getDistanceFromGoal()));
-
+            /*double currentVelocity = robot.outtake.outtakeMotor.getVelocity();
+            double tunedVelocity = robot.outtake.tuningRPM((int) currentVelocity);
+            robot.outtake.outtakeMotor.setVelocity(tunedVelocity);*/
             telemetry.update();
 
             Drawing.init();

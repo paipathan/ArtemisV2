@@ -1,5 +1,7 @@
 package org.firstinspires.ftc.teamcode.subsystems;
 
+import static org.firstinspires.ftc.robotcore.external.BlocksOpModeCompanion.gamepad1;
+
 import com.arcrobotics.ftclib.util.InterpLUT;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
@@ -73,28 +75,36 @@ public class Outtake {
     }
 
     public double getPredictedVelo(double distance) {
-        if(distance < 36.84 || distance > 141.25) {
-            return (6.87514 * distance +1350.24284) - 30;
+        if(distance < 28.19 || distance > 169.9) {
+            return -0.000152404 * Math.pow(distance,3) + 0.0735528 * Math.pow(distance, 2) -1.65181* distance +1556.83594;
         } else {
-            return lut.get(distance) - 45;
+            return lut.get(distance) + 20;
+        }
+    }
+
+    public double tuningRPM(int velocity) {
+        if (gamepad1.dpadUpWasPressed()) {
+            return velocity + 100;
+        } else if (gamepad1.dpadDownWasPressed()) {
+            return velocity - 100;
+        } else {
+            return velocity;
         }
     }
 
 
     public void configureLut() {
         lut = new InterpLUT();
-        lut.add(36.84, 1600);
-        lut.add(48.35, 1650);
-        lut.add(60.01, 1700);
-        lut.add(62.75, 1800);
-        lut.add(71.33, 1850);
-        lut.add(79.23, 1900);
-        lut.add(79.48, 1900);
-        lut.add(92.63, 2050);
-        lut.add(108.92, 2200);
-        lut.add(134.54, 2250);
-        lut.add(138.77, 2200);
-        lut.add(141.25, 2350);
+        lut.add(28.19, 1550);
+        lut.add(40.491, 1600);
+        lut.add(46.45, 1650);
+        lut.add(54.57, 1675);
+        lut.add(80.33, 1775);
+        lut.add(83.89, 1850);
+        lut.add(125.3, 2250);
+        lut.add(135.98, 2275);
+        lut.add(149.37, 2450);
+        lut.add(169.9, 2650);
         lut.createLUT();
     }
 

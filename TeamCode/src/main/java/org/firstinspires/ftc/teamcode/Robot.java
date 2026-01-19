@@ -53,12 +53,14 @@ public class Robot {
 
     public InstantCommand autoIntake;
 
+    public Pose bluestartpose = new Pose(8.299065, 8.299065, Math.toRadians(90));
+
     public Robot(HardwareMap hwMap, Alliance alliance, Gamepad gamepad) {
 //        LimeLight.init(hwMap);
         this.gamepad = gamepad;
         this.alliance = alliance;
 
-        resetPose = alliance == Alliance.BLUE ? new Pose(8, 8, Math.toRadians(90)) : new Pose(8, 8, Math.toRadians(90)).mirror();
+        resetPose = alliance == Alliance.BLUE ? bluestartpose : bluestartpose.mirror();
         goalPose = alliance == Alliance.BLUE ? new Pose(11, 138) : new Pose(11, 138).mirror();
 
         outtake = new Outtake(hwMap);
@@ -93,7 +95,7 @@ public class Robot {
 
         updateTurret();
 
-        if(!Outtake.isBusy) outtake.outtakeMotor.setVelocity(target * 0.7);
+        if(!Outtake.isBusy) outtake.outtakeMotor.setVelocity(outtake.getPredictedVelo(getDistanceFromGoal()) * 0.7);
 
         CommandManager.INSTANCE.run();
         BindingManager.update();
@@ -176,15 +178,15 @@ public class Robot {
                     intake.servo.setPosition(intake.servo.getPosition() - 0.01);
                 });
 
-        Button dpadup = button(() -> gamepad.dpad_up)
+       /* Button dpadup = button(() -> gamepad.dpad_up)
                 .whenBecomesTrue(() -> {
-                    target = target + 50;
+                    target = target + 25;
                 });
 
         Button dpaddown = button(() -> gamepad.dpad_down)
                 .whenBecomesTrue(() -> {
-                    target = target - 50;
-                });
+                    target = target - 25;
+                });*/
 
         Button toggleIntake = button(() -> gamepad.left_bumper)
                 .whenBecomesTrue(() -> {
@@ -199,16 +201,16 @@ public class Robot {
         Button toggleOuttake = button(() -> gamepad.right_bumper)
             .whenBecomesTrue(()-> {
                 intake.openGate().schedule();
-                outtake.setManual(target).schedule();
+                outtake.setPredictedVelo(getDistanceFromGoal()).schedule();
             }).whenBecomesFalse(() -> {
                 intake.stop().schedule();
                 intake.closeGate().schedule();
                 outtake.stop().schedule();
             })
                 .whenTrue(() -> {
-                    if(Math.abs(outtake.getVelocity() - target) < 15 && !Intake.isBusy) {
+                    if(Math.abs(outtake.getVelocity() - outtake.getPredictedVelo(getDistanceFromGoal())) < 15 && !Intake.isBusy) {
                         intake.start().schedule();
-                    } else if(Math.abs(outtake.getVelocity() - target) > 15 && Intake.isBusy) {
+                    } else if(Math.abs(outtake.getVelocity() - outtake.getPredictedVelo(getDistanceFromGoal())) > 15 && Intake.isBusy) {
                         intake.stop().schedule();
                     }
                 });
